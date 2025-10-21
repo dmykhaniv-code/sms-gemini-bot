@@ -1,16 +1,16 @@
 import os
 from flask import Flask, request
 from google import genai
-from vonage import Client # <--- ИСПРАВЛЕНО: Импортируем Client
+import vonage # <--- КОНФИГУРАЦИЯ: Правильный импорт Vonage
 
 # Инициализация Flask
 app = Flask(__name__)
 
-# Инициализация Gemini 
+# Инициализация Gemini
 client_gemini = genai.Client(api_key=os.environ.get("GEMINI_API_KEY")) 
 
-# Инициализация Vonage (Используем импортированный Client)
-client_vonage = Client( 
+# Инициализация Vonage (использует переменные окружения VONAGE_API_KEY и VONAGE_API_SECRET)
+client_vonage = vonage.Client( 
     key=os.environ.get("VONAGE_API_KEY"),
     secret=os.environ.get("VONAGE_API_SECRET")
 )
@@ -18,6 +18,7 @@ client_vonage = Client(
 @app.route("/sms", methods=['POST'])
 def sms_reply():
     # 1. Получение входящего SMS от Vonage
+    # Vonage использует 'text' для сообщения, 'msisdn' для отправителя, 'to' для номера Vonage
     incoming_msg = request.values.get('text', 'Привет', type=str)
     from_number = request.values.get('msisdn', None) 
     to_number_vonage = request.values.get('to', None) 
@@ -32,12 +33,13 @@ def sms_reply():
         )
         ai_response_text = response_gemini.text
     except Exception as e:
-        ai_response_text = "Извините, произошла ошибка AI. Попробуйте позже."
+        ai_response_text = "Вибачте, сталася внутрішня помилка AI. Спробуйте пізніше."
         print(f"Ошибка Gemini: {e}")
 
     # 3. Отправка ответного SMS через Vonage API
     if from_number and to_number_vonage:
         try:
+            # Отправка сообщения с использованием Vonage Messages API
             client_vonage.messages.send_message(
                 {
                     "from": to_number_vonage,   # Ваш номер Vonage
@@ -49,7 +51,7 @@ def sms_reply():
         except Exception as e:
             print(f"Ошибка отправки SMS Vonage: {e}")
 
-    # 4. Возвращаем HTTP 200 OK для Vonage
+    # 4. Возвращаем HTTP 200 OK, чтобы Vonage не повторял запрос
     return "", 200
 
 if __name__ == "__main__":

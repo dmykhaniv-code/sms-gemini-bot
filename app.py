@@ -1,4 +1,5 @@
 import os
+import datetime 
 from flask import Flask, request
 from google import genai
 # 1. ІМПОРТ TWILIO
@@ -6,6 +7,14 @@ from twilio.rest import Client as TwilioClient
 
 # Ініціалізація Flask
 app = Flask(__name__)
+
+# --- НОВИЙ МАРШРУТ ДЛЯ ПІНГУВАННЯ (HEALTH CHECK) ---
+# Цей маршрут обслуговує UptimeRobot і повертає 200 OK.
+@app.route("/", methods=['GET'])
+def health_check():
+    # Повертає 200 OK, щоб UptimeRobot вважав сервер активним.
+    return "OK", 200
+# -----------------------------------------------------
 
 # Ініціалізація Gemini API
 # Ключ береться зі змінної оточення GEMINI_API_KEY
@@ -25,7 +34,6 @@ TWILIO_NUMBER = os.environ.get("TWILIO_NUMBER")
 @app.route("/sms", methods=['POST'])
 def sms_reply():
     # 1. ОТРИМАННЯ ВХІДНОГО SMS (Twilio використовує 'Body' та 'From')
-    # request.values підходить для даних, надісланих Twilio (form-urlencoded)
     incoming_msg = request.values.get('Body', 'Який твій улюблений колір?', type=str)
     from_number = request.values.get('From', None)  # Номер, з якого надійшло SMS (ваш мобільний)
 
@@ -63,8 +71,7 @@ def sms_reply():
             
     return "", 200 # Twilio очікує 200 OK
 
-# Додаємо імпорт datetime для логів.
-import datetime 
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
+

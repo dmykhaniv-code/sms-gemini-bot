@@ -1,15 +1,17 @@
 import os
 from flask import Flask, request
 from google import genai
-from vonage import Client as VonageClient # <--- ФІНАЛЬНЕ ВИПРАВЛЕННЯ
+from vonage import Client as VonageClient # <--- Правильний імпорт для Vonage v3.0.0
 
 # Ініціалізація Flask
 app = Flask(__name__)
 
 # Ініціалізація Gemini 
+# Ключ береться з змінних оточення Render (GEMINI_API_KEY)
 client_gemini = genai.Client(api_key=os.environ.get("GEMINI_API_KEY")) 
 
 # Ініціалізація Vonage 
+# Ключі беруться з змінних оточення Render (VONAGE_API_KEY, VONAGE_API_SECRET)
 client_vonage = VonageClient( # <--- Викликаємо перейменований клас
     key=os.environ.get("VONAGE_API_KEY"),
     secret=os.environ.get("VONAGE_API_SECRET")
@@ -18,6 +20,7 @@ client_vonage = VonageClient( # <--- Викликаємо перейменова
 @app.route("/sms", methods=['POST'])
 def sms_reply():
     # 1. Отримання вхідного SMS від Vonage
+    # 'text' — це вміст повідомлення
     incoming_msg = request.values.get('text', 'Привіт', type=str)
     from_number = request.values.get('msisdn', None) 
     to_number_vonage = request.values.get('to', None) 

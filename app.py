@@ -1,18 +1,16 @@
 import os
 from flask import Flask, request
 from google import genai
-from vonage.client import Client # <--- ВИПРАВЛЕНО: Клієнт імпортується явно з підмодуля
+from vonage import Client as VonageClient # <--- ФІНАЛЬНЕ ВИПРАВЛЕННЯ
 
 # Ініціалізація Flask
 app = Flask(__name__)
 
 # Ініціалізація Gemini 
-# Ключ береться з змінних оточення Render (GEMINI_API_KEY)
 client_gemini = genai.Client(api_key=os.environ.get("GEMINI_API_KEY")) 
 
 # Ініціалізація Vonage 
-# Ключі беруться з змінних оточення Render (VONAGE_API_KEY, VONAGE_API_SECRET)
-client_vonage = Client( 
+client_vonage = VonageClient( # <--- Викликаємо перейменований клас
     key=os.environ.get("VONAGE_API_KEY"),
     secret=os.environ.get("VONAGE_API_SECRET")
 )
@@ -20,9 +18,6 @@ client_vonage = Client(
 @app.route("/sms", methods=['POST'])
 def sms_reply():
     # 1. Отримання вхідного SMS від Vonage
-    # 'text' — це вміст повідомлення
-    # 'msisdn' — це номер відправника
-    # 'to' — це ваш віртуальний номер Vonage
     incoming_msg = request.values.get('text', 'Привіт', type=str)
     from_number = request.values.get('msisdn', None) 
     to_number_vonage = request.values.get('to', None) 
@@ -43,7 +38,6 @@ def sms_reply():
     # 3. Відправка відповідного SMS через Vonage API
     if from_number and to_number_vonage:
         try:
-            # Виклик функції відправки повідомлень
             client_vonage.messages.send_message(
                 {
                     "from": to_number_vonage,   # З номера Vonage
@@ -55,9 +49,8 @@ def sms_reply():
         except Exception as e:
             print(f"Помилка відправки SMS Vonage: {e}")
 
-    # 4. Повертаємо HTTP 200 OK, щоб Vonage знав, що запит успішно оброблено
+    # 4. Повертаємо HTTP 200 OK
     return "", 200
 
 if __name__ == "__main__":
-    # Gunicorn використовуватиме цей файл, але для локального тестування це також працює
     app.run(port=5000, debug=True)
